@@ -260,7 +260,7 @@
   P.text = (n) => `<div ${attrs(n, 'm-text' + (n.muted ? ' m-muted' : ''), `${n.size ? `font-size:${n.size}px;` : ''}${n.weight ? `font-weight:${n.weight};` : ''}`)}>${rich(n.v)}</div>`;
   P.label = (n) => `<div ${attrs(n, 'm-label')}>${esc(n.v)}${n.right ? `<span>${cell(n.right)}</span>` : ''}</div>`;
   P.btns = (n) => `<div ${attrs(n, 'm-btnrow')}>${btns(n.items)}</div>`;
-  P.cell = (n) => `<div ${attrs(n, 'm-inline')}>${cell(n.v)}</div>`;
+  P.cell = (n) => `<div ${attrs(n, 'm-cellwrap')}>${cell(n.v)}</div>`;
 
   P.sidebar = (n) => {
     const head = n.head ? `<div class="m-sb-head">${n.head.logo ? `<span class="m-logo" style="background:${n.head.color || 'var(--m-accent)'}">${esc(n.head.logo)}</span>` : ''}<span class="m-sb-name">${esc(n.head.name)}</span>${n.head.caret !== false ? ic('down', 13, 'm-faint') : ''}<span class="m-spacer"></span>${(n.head.icons || []).map((i) => `<span class="m-ibtn">${ic(i, 15)}</span>`).join('')}</div>` : '';
@@ -397,6 +397,7 @@
     return `<div ${attrs(n, 'm-chart' + (n.card ? ' card' : ''))}>${head}${legend}<svg viewBox="0 0 ${vw} ${vh}" width="100%" preserveAspectRatio="xMidYMid meet">${grid}${body}${yl}${xl}</svg>${n.foot ? `<div class="m-chart-foot">${rich(n.foot)}</div>` : ''}</div>`;
   };
   const fmtAxis = (v, unit = '') => {
+    if (unit === 'ms' && v >= 1000) return (v / 1000).toFixed(1) + 's';
     let s = v >= 1e6 ? (v / 1e6).toFixed(1) + 'M' : v >= 1000 ? (v / 1000).toFixed(v >= 1e4 ? 0 : 1) + 'k' : v >= 10 ? Math.round(v) : v.toFixed(1);
     if (v === 0) s = '0';
     return unit === '$' ? '$' + s : s + unit;
@@ -455,7 +456,7 @@
         case 'static': ctrl = `<div class="m-static">${cell(f.v)}</div>`; break;
         default: ctrl = `<div class="m-input${f.focus ? ' focus' : ''}${f.err ? ' err' : ''}">${f.lead ? cell(f.lead) : ''}${val}${f.focus ? '<span class="m-caret-blink"></span>' : ''}<span class="m-spacer"></span>${f.trail ? cell(f.trail) : ''}</div>`;
       }
-      return `<div class="m-field" style="${f.flex ? `flex:${f.flex}` : ''}">${f.l ? `<div class="m-flabel">${esc(f.l)}${f.req ? '<i>*</i>' : ''}${f.opt ? '<span class="m-muted"> (optional)</span>' : ''}</div>` : ''}${ctrl}${f.err ? `<div class="m-ferr">${ic('alert', 12)}${esc(f.err)}</div>` : f.hint ? `<div class="m-fhint">${rich(f.hint)}</div>` : ''}</div>`;
+      return `<div class="m-field" style="${f.flex ? `flex:${f.flex}` : ''}">${f.l ? `<div class="m-flabel">${esc(f.l)}${f.req ? '<i>*</i>' : ''}${f.opt ? '<span class="m-muted"> (optional)</span>' : ''}</div>` : ''}${ctrl}${f.err ? `<div class="m-ferr">${ic('alert', 12)}${esc(f.err)}</div>` : f.hint && f.type !== 'upload' ? `<div class="m-fhint">${rich(f.hint)}</div>` : ''}</div>`;
     };
     return `<div ${attrs(n, 'm-form' + (n.card ? ' card' : ''))}>${n.title ? `<div class="m-form-title"><b>${esc(n.title)}</b>${n.sub ? `<span class="m-muted">${rich(n.sub)}</span>` : ''}</div>` : ''}${n.fields.map(field).join('')}${n.actions ? `<div class="m-form-actions">${btns(n.actions)}</div>` : ''}</div>`;
   };

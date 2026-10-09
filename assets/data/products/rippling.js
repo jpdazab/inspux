@@ -55,7 +55,8 @@
 
   const review = wizard(5, [
     { t: 'h', text: 'Review and send offer', size: 22, sub: 'Check the details. Tom will get an offer letter to sign, then onboarding starts automatically.' },
-    { t: 'banner', tone: 'success', text: 'When Tom signs, Rippling will create a Google Workspace account, invite him to Slack and GitHub, and ship a MacBook Pro to Berlin.' },
+    { t: 'progress', l: 'Onboarding readiness', r: '5 of 6 sections complete · Benefits will be chosen by Tom', v: 0.83 },
+    { t: 'banner', tone: 'success', text: 'When Tom signs, Rippling will create a Google Workspace account, add Tom to Slack and GitHub, and ship a MacBook Pro to Berlin.' },
     { t: 'row', gap: 16, c: [
       { t: 'props', flex: 1, st: 'border:1px solid var(--m-border);border-radius:10px;padding:14px 16px', title: 'Basics', titleRight: { btn: { l: 'Edit', k: 'ghost', sm: 1 } }, rows: [['Name', 'Tom Becker'], ['Email', 'tom.becker@gmail.com'], ['Role', 'Account Executive'], ['Manager', { av: 'Sofia Ruiz', size: 20 }]] },
       { t: 'props', flex: 1, st: 'border:1px solid var(--m-border);border-radius:10px;padding:14px 16px', title: 'Employment', titleRight: { btn: { l: 'Edit', k: 'ghost', sm: 1 } }, rows: [['Start date', 'Oct 20, 2026'], ['Type', 'Full-time'], ['Location', 'Berlin office'], ['Entity', 'Acme GmbH']] },

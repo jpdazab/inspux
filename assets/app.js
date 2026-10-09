@@ -274,7 +274,7 @@
       <p>${kind === 'pattern' ? 'Recurring solutions to recurring problems: how products handle navigation, data, editing, feedback and collaboration. Each one links to the screens that use it.' : 'Filters, forms, drawers, tables and the rest, each shown on the real screens that use it. The component is outlined on every example.'}</p></div>
       ${Object.entries(groups).map(([g, ks]) => `
         <div class="tax-group"><div class="section-head"><h2>${esc(g)}</h2><span class="mono">${ks.length}</span></div>
-        <div class="tax-list">${ks.sort((a, b) => (counts[b] || 0) - (counts[a] || 0)).map((k) => { const ex = screens.find((s) => s[key].includes(k)); return `
+        <div class="tax-list">${ks.sort((a, b) => (counts[b] || 0) - (counts[a] || 0)).map((k, i) => { const m = screens.filter((s) => s[key].includes(k)); const ex = m[(i * 7 + k.length) % (m.length || 1)]; return `
           <a class="tax${counts[k] ? '' : ' zero'}" href="#${kind}/${k}"><div><h3>${esc(dict[k].name)}<span class="mono">${counts[k] || 0}</span></h3><p>${esc(dict[k].desc)}</p></div>${ex ? thumb(ex, kind === 'component' ? k : null) : '<span></span>'}</a>`; }).join('')}</div></div>`).join('')}`;
     hydrate(main);
   };

@@ -69,9 +69,9 @@
       { t: 'cards', cols: 1, items: [
         { title: 'Companies (1)', sub: '**Northwind** · northwind.io · 240 employees', actions: [{ l: '+ Add', k: 'ghost', sm: 1 }] },
         { title: 'Deals (1)', sub: '**Northwind – Pro annual** · $12,000 · Appointment scheduled · Close Oct 31', actions: [{ l: '+ Add', k: 'ghost', sm: 1 }] },
-        { title: 'Tickets (0)', sub: 'No open tickets', actions: [{ l: '+ Add', k: 'ghost', sm: 1 }] },
         { title: 'Attachments', sub: 'Security questionnaire.pdf', actions: [{ l: '+ Add', k: 'ghost', sm: 1 }] },
       ] },
+      { t: 'empty', i: 'help', st: 'padding:18px;border:1px dashed var(--m-border);border-radius:10px;background:var(--m-bg)', title: 'No tickets yet', text: 'Support tickets for Ana will appear here, so reps see open issues before a call.', actions: [{ l: 'Create ticket', sm: 1 }] },
     ] },
   ] };
 
@@ -120,7 +120,7 @@
         spec: { ...browser('Deals | HubSpot', 'contacts/44120/objects/0-3/views/all/board'), body: shell('sales', pipeline) } },
       { id: 'hubspot-create-deal', title: 'Create deal drawer', desc: 'A right drawer form for creating a deal without leaving the board, with association fields and "Create and add another".', patterns: ['progressive-disclosure', 'inline-editing'],
         spec: { ...browser('Deals | HubSpot', 'contacts/44120/objects/0-3/views/all/board'), body: shell('sales', pipeline), dim: 0.35, overlays: [createDeal] } },
-      { id: 'hubspot-record', title: 'Contact record', desc: 'Three-column record: identity and quick actions on the left, filtered activity timeline in the middle, associated records on the right.', patterns: ['three-pane', 'activity-timeline', 'contextual-inspector'],
+      { id: 'hubspot-record', title: 'Contact record', desc: 'Three-column record: identity and quick actions on the left, filtered activity timeline in the middle, associated records on the right.', patterns: ['three-pane', 'activity-timeline', 'contextual-inspector', 'empty-state'],
         spec: { ...browser('Ana Silva | HubSpot', 'contacts/44120/record/0-1/8812'), body: shell('crm', record) } },
     ],
     flows: [{

@@ -272,7 +272,8 @@ a.tag:hover { color: var(--ink); border-color: var(--line-strong); }
 @media (max-width: 640px) {
   .vbar { flex-wrap: wrap; }
   .vbar-title { flex: 1 0 100%; order: -1; }
-  .hide-sm { display: none !important; }
+  .hide-sm, .stage-hint { display: none !important; }
+  .vbar { gap: 8px; }
 }
 
 @media (prefers-reduced-motion: reduce) { * { transition: none !important; } }
