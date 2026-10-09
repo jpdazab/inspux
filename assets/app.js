@@ -14,7 +14,8 @@
     search: 'M11 4a7 7 0 1 0 0 14a7 7 0 0 0 0-14z M21 21l-4.3-4.3', x: 'M18 6L6 18 M6 6l12 12', left: 'M15 6l-6 6 6 6', right: 'M9 6l6 6-6 6',
     plus: 'M12 5v14 M5 12h14', minus: 'M5 12h14', ext: 'M7 17L17 7 M7 7h10v10', back: 'M19 12H5 M12 19l-7-7 7-7', arrow: 'M5 12h14 M12 5l7 7-7 7',
     moon: 'M21 12.8A9 9 0 1 1 11.2 3a7 7 0 0 0 9.8 9.8z', sun: 'M12 8a4 4 0 1 0 0 8a4 4 0 0 0 0-8z M12 2v2 M12 20v2 M4.9 4.9l1.4 1.4 M17.7 17.7l1.4 1.4 M2 12h2 M20 12h2 M4.9 19.1l1.4-1.4 M17.7 6.3l1.4-1.4',
-    filter: 'M3 5h18 M6 12h12 M10 19h4', fit: 'M15 3h6v6 M9 21H3v-6 M21 3l-7 7 M3 21l7-7', comp: 'M3 3h7v7H3z M14 3h7v7h-7z M14 14h7v7h-7z M3 14h7v7H3z',
+    filter: 'M4 6h16 M7 12h10 M10 18h4', comp: 'M3 3h7v7H3z M14 3h7v7h-7z M14 14h7v7h-7z M3 14h7v7H3z', down: 'M6 9l6 6 6-6',
+    alert: 'M10.3 3.9L1.8 18a2 2 0 0 0 1.7 3h17a2 2 0 0 0 1.7-3L13.7 3.9a2 2 0 0 0-3.4 0z M12 9v4 M12 17h.01',
   };
 
   /* ---------- Index ---------- */
@@ -35,12 +36,9 @@
   flows.forEach((f) => f.steps.forEach((st, i) => { const s = screenById[st.screen]; if (s) s.flows.push({ flow: f, index: i }); }));
   const htmlCache = {};
   const screenHTML = (s) => (htmlCache[s.id] ||= MOCK.render(s.spec));
-  const countBy = (key) => { const m = {}; screens.forEach((s) => s[key].forEach((x) => { m[x] = (m[x] || 0) + 1; })); return m; };
-  const patternCount = countBy('patterns');
-  const compCount = countBy('comps');
   const platformLabel = { desktop: 'Desktop app', web: 'Web app' };
 
-  /* ---------- Thumbnails ---------- */
+  /* ---------- Thumbnails & cards ---------- */
   const ro = new ResizeObserver((entries) => entries.forEach((e) => e.target.style.setProperty('--s', e.contentRect.width / MOCK.W)));
   const thumb = (s, focus) => `<div class="thumb" data-sid="${s.id}"${focus ? ` data-focus="${focus}"` : ''}>${screenHTML(s)}</div>`;
   function hydrate(root) {
@@ -49,43 +47,63 @@
       if (t.dataset.focus) $$(`[data-comp="${t.dataset.focus}"]`, t).forEach((el) => el.classList.add('m-focus'));
     });
   }
-  const logo = (p, cls = 'plogo') => `<span class="${cls}" style="background:${p.color}">${esc(p.name[0])}</span>`;
-  const screenCard = (s, ctx, focus) => `<button class="scard" data-open="${s.id}" data-ctx="${ctx}"${focus ? ` data-focus="${focus}"` : ''} aria-label="Open ${esc(s.product.name)}: ${esc(s.title)}">
-      ${thumb(s, focus)}
+  const icon = (p, size = 'md') => `<span class="appicon ${size}" style="background:${p.color}">${esc(p.name[0])}</span>`;
+
+  // A screen tile: grey rounded frame holding the screen, app identity underneath
+  const screenCard = (s, ctx, opts = {}) => `<button class="scard" data-open="${s.id}" data-ctx="${ctx}"${opts.focus ? ` data-focus="${opts.focus}"` : ''} aria-label="Open ${esc(s.product.name)}: ${esc(s.title)}">
+      <span class="tile">${thumb(s, opts.focus)}</span>
       <span class="scard-meta">
-        <span class="scard-top"><span class="pdot" style="background:${s.product.color}"></span>${esc(s.product.name)} · ${esc(industries[s.product.industry])}</span>
-        <span class="scard-title">${esc(s.title)}</span>
-        <span class="tags">${s.patterns.slice(0, 3).map((x) => `<span class="tag">${esc(patterns[x].name)}</span>`).join('')}</span>
+        ${opts.hideApp ? '' : icon(s.product, 'sm')}
+        <span class="scard-text"><b>${esc(opts.hideApp ? s.title : s.product.name)}</b><span>${esc(opts.hideApp ? s.patterns.slice(0, 2).map((x) => patterns[x].name).join(' · ') : s.title)}</span></span>
       </span>
     </button>`;
 
   /* ---------- Shell ---------- */
   const app = $('#app');
   app.innerHTML = `
-    <header class="hdr"><div class="wrap hdr-in">
-      <a class="brand" href="#screens"><span class="brand-mark" aria-hidden="true"></span>inspux</a>
-      <nav class="nav" aria-label="Sections">
-        <a href="#screens" data-nav="screens">Screens<span class="n">${screens.length}</span></a>
-        <a href="#products" data-nav="products">Products<span class="n">${products.length}</span></a>
-        <a href="#flows" data-nav="flows">User flows<span class="n">${flows.length}</span></a>
-        <a href="#patterns" data-nav="patterns">Patterns<span class="n">${Object.keys(patterns).length}</span></a>
-        <a href="#components" data-nav="components">Components<span class="n">${Object.keys(components).length}</span></a>
+    <header class="hdr">
+      <div class="hdr-top">
+        <a class="brand" href="#apps" aria-label="Inspux home"><span class="brand-mark" aria-hidden="true"></span>Inspux</a>
+        <div class="hdr-center">
+          <div class="platform" role="tablist" aria-label="Platform">
+            <button data-plat="" role="tab">All</button><button data-plat="desktop" role="tab">Desktop</button><button data-plat="web" role="tab">Web</button>
+          </div>
+          <label class="search">${svg(I.search, 18)}<input id="q" type="search" placeholder="Search apps, screens, UI elements or flows" autocomplete="off" aria-label="Search"><kbd>/</kbd></label>
+        </div>
+        <div class="hdr-right">
+          <button class="iconbtn" id="theme" aria-label="Toggle color theme"></button>
+          <a class="pill dark hide-sm" href="#screens">Browse screens</a>
+        </div>
+      </div>
+      <nav class="tabs" aria-label="Sections">
+        <a href="#apps" data-nav="apps">Apps</a>
+        <a href="#screens" data-nav="screens">Screens</a>
+        <a href="#elements" data-nav="elements">UI Elements</a>
+        <a href="#flows" data-nav="flows">Flows</a>
+        <a href="#patterns" data-nav="patterns">Patterns</a>
       </nav>
-      <label class="hdr-search">${svg(I.search)}<input id="q" type="search" placeholder="Search screens, patterns, components" autocomplete="off" aria-label="Search"><kbd>/</kbd></label>
-      <button class="icon-btn" id="theme" aria-label="Toggle color theme"></button>
-    </div></header>
-    <main id="main" class="wrap page"></main>
-    <footer class="wrap foot"><p>Every screen here is a hand-built HTML recreation made for study, not a screenshot. Layouts, copy and data are illustrative and may differ from the live products. Product names belong to their owners; Inspux is not affiliated with any of them.</p></footer>
-    <div class="viewer" id="viewer" hidden role="dialog" aria-modal="true" aria-label="Screen viewer"></div>`;
+    </header>
+    <main id="main" class="main"></main>
+    <footer class="foot">
+      <div class="foot-cols">
+        <div class="foot-brand"><a class="brand" href="#apps"><span class="brand-mark" aria-hidden="true"></span>Inspux</a><p>A reference library of desktop SaaS screens, flows, UI elements and patterns.</p></div>
+        <div><h4>Browse</h4><a href="#apps">Apps</a><a href="#screens">Screens</a><a href="#elements">UI Elements</a><a href="#flows">Flows</a><a href="#patterns">Patterns</a></div>
+        <div><h4>Categories</h4>${Object.entries(industries).slice(0, 6).map(([k, v]) => `<a href="#screens" data-cat="${k}">${esc(v)}</a>`).join('')}</div>
+        <div><h4>More categories</h4>${Object.entries(industries).slice(6).map(([k, v]) => `<a href="#screens" data-cat="${k}">${esc(v)}</a>`).join('')}</div>
+      </div>
+      <p class="foot-note">Every screen is a hand-built HTML recreation made for study, not a screenshot. Layouts, copy and data are illustrative and may differ from the live products. Product names belong to their owners; Inspux is not affiliated with any of them.</p>
+    </footer>
+    <div class="overlay" id="filters-dialog" hidden role="dialog" aria-modal="true" aria-label="Filters"></div>
+    <div class="overlay viewer" id="viewer" hidden role="dialog" aria-modal="true" aria-label="Screen viewer"></div>`;
   const main = $('#main');
 
-  // Theme toggle: system → explicit opposite → back to system
+  // Theme toggle
   const themeBtn = $('#theme');
   const sysDark = () => matchMedia('(prefers-color-scheme: dark)').matches;
   function applyTheme(t) {
     if (t) document.documentElement.setAttribute('data-theme', t); else document.documentElement.removeAttribute('data-theme');
     const dark = t ? t === 'dark' : sysDark();
-    themeBtn.innerHTML = svg(dark ? I.sun : I.moon, 17);
+    themeBtn.innerHTML = svg(dark ? I.sun : I.moon, 18);
     themeBtn.title = dark ? 'Switch to light' : 'Switch to dark';
   }
   applyTheme(store.get('theme', null));
@@ -95,239 +113,249 @@
     store.set('theme', next); applyTheme(next);
   };
 
-  /* ---------- Browse state ---------- */
-  const state = { q: '', industry: [], platform: [], pattern: [], comp: [], ...store.get('filters', {}) };
-  state.q = '';
-  const saveFilters = () => store.set('filters', { industry: state.industry, platform: state.platform, pattern: state.pattern, comp: state.comp });
+  /* ---------- State ---------- */
+  const saved = store.get('state', {});
+  const state = { q: '', platform: saved.platform || '', cat: saved.cat || '', pattern: saved.pattern || [], comp: saved.comp || [] };
+  const save = () => store.set('state', { platform: state.platform, cat: state.cat, pattern: state.pattern, comp: state.comp });
   const qInput = $('#q');
 
-  const searchText = (s) => (s._t ||= [s.title, s.desc, s.product.name, industries[s.product.industry], ...s.patterns.map((x) => patterns[x].name), ...s.comps.map((x) => components[x].name)].join(' ').toLowerCase());
-  function matches(s, skip) {
-    if (state.q) { const words = state.q.toLowerCase().split(/\s+/).filter(Boolean); const t = searchText(s); if (!words.every((w) => t.includes(w))) return false; }
-    if (skip !== 'industry' && state.industry.length && !state.industry.includes(s.product.industry)) return false;
-    if (skip !== 'platform' && state.platform.length && !state.platform.includes(s.product.platform)) return false;
+  function syncPlatform() {
+    $$('[data-plat]').forEach((b) => { const on = b.dataset.plat === state.platform; b.classList.toggle('on', on); b.setAttribute('aria-selected', on); });
+    const label = { '': 'all platforms', desktop: 'Desktop', web: 'Web' }[state.platform];
+    qInput.placeholder = `Search on ${label}…`;
+  }
+  $$('[data-plat]').forEach((b) => b.onclick = () => { state.platform = b.dataset.plat; save(); syncPlatform(); render(true); });
+  syncPlatform();
+
+  const words = () => state.q.toLowerCase().split(/\s+/).filter(Boolean);
+  const hit = (text) => words().every((w) => text.toLowerCase().includes(w));
+  const onPlatform = (p) => !state.platform || p.platform === state.platform;
+  const screenText = (s) => (s._t ||= [s.title, s.desc, s.product.name, industries[s.product.industry], ...s.patterns.map((x) => patterns[x].name), ...s.comps.map((x) => components[x].name)].join(' '));
+  function screenMatches(s, skip) {
+    if (!onPlatform(s.product)) return false;
+    if (state.q && !hit(screenText(s))) return false;
+    if (skip !== 'cat' && state.cat && s.product.industry !== state.cat) return false;
     if (skip !== 'pattern' && !state.pattern.every((x) => s.patterns.includes(x))) return false;
     if (skip !== 'comp' && !state.comp.every((x) => s.comps.includes(x))) return false;
     return true;
   }
 
+  /* ---------- Shared bits ---------- */
+  const catChips = (counts) => `<div class="chips" role="group" aria-label="Category">
+      <button class="chip${state.cat ? '' : ' on'}" data-setcat="">All</button>
+      ${Object.entries(industries).map(([k, v]) => `<button class="chip${state.cat === k ? ' on' : ''}${counts && !counts[k] ? ' zero' : ''}" data-setcat="${k}">${esc(v)}</button>`).join('')}
+    </div>`;
+  const bindChips = (root) => $$('[data-setcat]', root).forEach((b) => b.onclick = () => { state.cat = b.dataset.setcat; save(); render(true); });
+  const emptyBox = (title, text, btn) => `<div class="empty"><b>${esc(title)}</b><span>${esc(text)}</span>${btn ? `<button class="pill" id="${btn[0]}">${esc(btn[1])}</button>` : ''}</div>`;
+  const pageHead = (title, sub, right = '') => `<div class="phead"><div><h1>${title}</h1>${sub ? `<p>${sub}</p>` : ''}</div>${right}</div>`;
+  const resetAll = () => { state.cat = ''; state.pattern = []; state.comp = []; state.q = ''; qInput.value = ''; save(); render(true); };
+
   /* ---------- Pages ---------- */
   const pages = {};
 
-  pages.screens = () => {
-    const opened = store.get('open', {});
-    const group = (key, title, note, opts) => {
-      const base = screens.filter((s) => matches(s, key));
-      const count = (v) => base.filter((s) => (key === 'industry' ? s.product.industry === v : key === 'platform' ? s.product.platform === v : key === 'pattern' ? s.patterns.includes(v) : s.comps.includes(v))).length;
-      let list = opts.map(([v, label, sw]) => ({ v, label, sw, n: count(v), on: state[key].includes(v) }));
-      if (key === 'pattern' || key === 'comp') list.sort((a, b) => b.on - a.on || b.n - a.n || a.label.localeCompare(b.label));
-      const limit = 8; const showAll = opened[key];
-      const shown = showAll ? list : list.slice(0, limit);
-      return `<div class="fgroup"><h3>${title}<span>${note}</span></h3>${shown.map((o) => `<label class="fopt${o.n ? '' : ' zero'}"><input type="checkbox" data-f="${key}" value="${o.v}"${o.on ? ' checked' : ''}>${o.sw ? `<span class="sw" style="background:${o.sw}"></span>` : ''}<span>${esc(o.label)}</span><span class="c">${o.n}</span></label>`).join('')}${list.length > limit ? `<button class="fmore" data-more="${key}">${showAll ? 'Show fewer' : `Show all ${list.length}`}</button>` : ''}</div>`;
-    };
-    const res = screens.filter((s) => matches(s));
-    const active = [
-      ...state.industry.map((v) => ['industry', v, industries[v]]), ...state.platform.map((v) => ['platform', v, platformLabel[v]]),
-      ...state.pattern.map((v) => ['pattern', v, patterns[v].name]), ...state.comp.map((v) => ['comp', v, components[v].name]),
-    ];
+  pages.apps = () => {
+    const list = products.filter((p) => onPlatform(p) && (!state.cat || p.industry === state.cat) && (!state.q || hit([p.name, p.tagline, industries[p.industry]].join(' '))));
+    const counts = {}; products.filter(onPlatform).forEach((p) => { counts[p.industry] = (counts[p.industry] || 0) + 1; });
     main.innerHTML = `
-      <div class="page-head">
-        <span class="eyebrow">Desktop SaaS screen library</span>
-        <h1>Study how good software is put together.</h1>
-        <p>${screens.length} desktop screens from ${products.length} SaaS products, recreated by hand and broken down into user flows, UX patterns and the components they use. Open any screen to zoom in and outline its components.</p>
-      </div>
-      <div class="browse">
-        <aside class="filters" id="filters" aria-label="Filters">
-          ${group('industry', 'Industry', 'any of', Object.entries(industries).map(([k, v]) => [k, v, (products.find((p) => p.industry === k) || {}).color]))}
-          ${group('platform', 'Platform', 'any of', Object.entries(platformLabel))}
-          ${group('pattern', 'Patterns', 'all of', Object.entries(patterns).map(([k, v]) => [k, v.name]))}
-          ${group('comp', 'Components', 'all of', Object.entries(components).map(([k, v]) => [k, v.name]))}
-        </aside>
-        <section aria-label="Results">
-          <div class="results-bar">
-            <button class="btn filters-toggle" id="ftoggle">${svg(I.filter)}Filters${active.length ? ` (${active.length})` : ''}</button>
-            <span class="count">${res.length} of ${screens.length} screens${state.q ? ` for “${esc(state.q)}”` : ''}</span>
-            ${active.map(([k, v, l]) => `<button class="chip on" data-rm="${k}" data-v="${v}">${esc(l)}${svg(I.x, 13)}</button>`).join('')}
-            ${active.length || state.q ? '<button class="clear" id="clear">Clear all</button>' : ''}
-          </div>
-          ${res.length ? `<div class="grid">${res.map((s) => screenCard(s, 'browse')).join('')}</div>` : `<div class="empty-results"><b>No screens match these filters.</b><span>Remove a filter or clear the search to see more.</span><button class="btn" id="clear2">Clear filters</button></div>`}
-        </section>
-      </div>`;
-    browseCtx = res.map((s) => s.id);
-    hydrate(main);
-    $$('[data-f]', main).forEach((cb) => cb.onchange = () => {
-      const k = cb.dataset.f; const set = new Set(state[k]);
-      cb.checked ? set.add(cb.value) : set.delete(cb.value);
-      state[k] = [...set]; saveFilters(); rerenderKeepScroll();
-    });
-    $$('[data-more]', main).forEach((b) => b.onclick = () => { opened[b.dataset.more] = !opened[b.dataset.more]; store.set('open', opened); rerenderKeepScroll(); });
-    $$('[data-rm]', main).forEach((b) => b.onclick = () => { const k = b.dataset.rm; state[k] = state[k].filter((x) => x !== b.dataset.v); saveFilters(); rerenderKeepScroll(); });
-    const clear = () => { state.industry = []; state.platform = []; state.pattern = []; state.comp = []; state.q = ''; qInput.value = ''; saveFilters(); rerenderKeepScroll(); };
-    ($('#clear', main) || {}).onclick = clear; ($('#clear2', main) || {}).onclick = clear;
-    $('#ftoggle', main).onclick = () => $('#filters', main).classList.toggle('open');
+      ${state.q ? '' : `<section class="hero"><h1>Design inspiration from the best desktop SaaS products.</h1><p>${screens.length} screens, ${flows.length} flows and ${Object.keys(components).length} UI elements from ${products.length} products, recreated so you can zoom into every detail.</p></section>`}
+      ${pageHead('Apps', `${list.length} ${list.length === 1 ? 'app' : 'apps'}${state.q ? ` matching “${esc(state.q)}”` : ''}`)}
+      ${catChips(counts)}
+      ${list.length ? `<div class="agrid">${list.map((p) => `
+        <a class="acard" href="#app/${p.id}">
+          <span class="tile">${thumb(p.screens[0])}</span>
+          <span class="acard-meta">${icon(p)}<span class="acard-text"><b>${esc(p.name)}</b><span>${esc(industries[p.industry])}</span></span><span class="acard-n">${p.screens.length} screens</span></span>
+        </a>`).join('')}</div>` : emptyBox('No apps found', 'Try another category or clear the search.', ['reset', 'Clear filters'])}`;
+    hydrate(main); bindChips(main);
+    ($('#reset', main) || {}).onclick = resetAll;
   };
+
   let browseCtx = [];
-  function rerenderKeepScroll() {
-    const y = scrollY; const fOpen = ($('#filters') || {}).classList?.contains('open'); const fs = ($('#filters') || {}).scrollTop || 0;
-    pages.screens(); scrollTo(0, y);
-    if (fOpen) $('#filters').classList.add('open');
-    if ($('#filters')) $('#filters').scrollTop = fs;
+  pages.screens = () => {
+    const res = screens.filter((s) => screenMatches(s));
+    const catCounts = {}; screens.filter((s) => screenMatches(s, 'cat')).forEach((s) => { catCounts[s.product.industry] = (catCounts[s.product.industry] || 0) + 1; });
+    const active = [...state.pattern.map((v) => ['pattern', v, patterns[v].name]), ...state.comp.map((v) => ['comp', v, components[v].name])];
+    main.innerHTML = `
+      ${pageHead('Screens', `${res.length} of ${screens.length} screens${state.q ? ` matching “${esc(state.q)}”` : ''}`, `<button class="pill" id="open-filters">${svg(I.filter)}Filters${active.length ? `<span class="badge">${active.length}</span>` : ''}</button>`)}
+      ${catChips(catCounts)}
+      ${active.length ? `<div class="active">${active.map(([k, v, l]) => `<button class="tagpill" data-rm="${k}" data-v="${v}">${esc(l)}${svg(I.x, 13)}</button>`).join('')}<button class="link" id="clear-active">Clear all</button></div>` : ''}
+      ${res.length ? `<div class="sgrid">${res.map((s) => screenCard(s, 'browse')).join('')}</div>` : emptyBox('No screens match these filters', 'Remove a filter or pick another category.', ['reset', 'Clear filters'])}`;
+    browseCtx = res.map((s) => s.id);
+    hydrate(main); bindChips(main);
+    $('#open-filters', main).onclick = openFilters;
+    $$('[data-rm]', main).forEach((b) => b.onclick = () => { const k = b.dataset.rm; state[k] = state[k].filter((x) => x !== b.dataset.v); save(); render(true); });
+    ($('#clear-active', main) || {}).onclick = () => { state.pattern = []; state.comp = []; save(); render(true); };
+    ($('#reset', main) || {}).onclick = resetAll;
+  };
+
+  // Filter dialog: patterns and UI elements, counts update as choices combine
+  const fdlg = $('#filters-dialog');
+  function openFilters() {
+    const draft = { pattern: [...state.pattern], comp: [...state.comp] };
+    const draw = () => {
+      const base = screens.filter((s) => onPlatform(s.product) && (!state.cat || s.product.industry === state.cat) && (!state.q || hit(screenText(s))));
+      const ok = (s) => draft.pattern.every((x) => s.patterns.includes(x)) && draft.comp.every((x) => s.comps.includes(x));
+      const n = base.filter(ok).length;
+      const col = (key, dict, title) => {
+        const groups = {};
+        Object.entries(dict).forEach(([k, v]) => { (groups[v.group] ||= []).push(k); });
+        return `<div class="fcol"><h3>${title}</h3>${Object.entries(groups).map(([g, ks]) => `<div class="fgroup"><h4>${esc(g)}</h4>${ks.map((k) => {
+          const on = draft[key].includes(k);
+          const c = base.filter((s) => ok(s) || on).filter((s) => (key === 'pattern' ? s.patterns : s.comps).includes(k) && (on || ok(s))).length;
+          return `<label class="fopt${c || on ? '' : ' zero'}"><input type="checkbox" data-k="${key}" value="${k}"${on ? ' checked' : ''}><span>${esc(dict[k].name)}</span><em>${c}</em></label>`;
+        }).join('')}</div>`).join('')}</div>`;
+      };
+      fdlg.innerHTML = `<div class="dialog">
+          <div class="dialog-head"><b>Filters</b><button class="iconbtn" data-close aria-label="Close filters">${svg(I.x)}</button></div>
+          <div class="dialog-body">${col('pattern', patterns, 'Patterns')}${col('comp', components, 'UI Elements')}</div>
+          <div class="dialog-foot"><button class="link" data-clear>Clear all</button><button class="pill dark" data-apply>Show ${n} screen${n === 1 ? '' : 's'}</button></div>
+        </div>`;
+      $$('[data-k]', fdlg).forEach((cb) => cb.onchange = () => { const set = new Set(draft[cb.dataset.k]); cb.checked ? set.add(cb.value) : set.delete(cb.value); draft[cb.dataset.k] = [...set]; const y = $('.dialog-body', fdlg).scrollTop; draw(); $('.dialog-body', fdlg).scrollTop = y; });
+      $('[data-close]', fdlg).onclick = closeFilters;
+      $('[data-clear]', fdlg).onclick = () => { draft.pattern = []; draft.comp = []; draw(); };
+      $('[data-apply]', fdlg).onclick = () => { state.pattern = draft.pattern; state.comp = draft.comp; save(); closeFilters(); render(true); };
+    };
+    draw();
+    fdlg.hidden = false; document.body.style.overflow = 'hidden';
+    $('[data-close]', fdlg).focus();
   }
+  function closeFilters() { fdlg.hidden = true; document.body.style.overflow = ''; }
+  fdlg.addEventListener('click', (e) => { if (e.target === fdlg) closeFilters(); });
 
-  pages.products = () => {
+  // UI elements and patterns: grids of categories, each with a representative screen
+  const taxGrid = (kind) => {
+    const dict = kind === 'element' ? components : patterns;
+    const key = kind === 'element' ? 'comps' : 'patterns';
+    const visible = screens.filter((s) => onPlatform(s.product));
+    const entries = Object.entries(dict).filter(([k, v]) => !state.q || hit(v.name + ' ' + v.desc));
+    const groups = {};
+    entries.forEach(([k, v]) => { (groups[v.group] ||= []).push(k); });
     main.innerHTML = `
-      <div class="page-head"><span class="eyebrow">Products</span><h1>${products.length} products, ${Object.keys(industries).length} industries.</h1>
-      <p>Each product page has a UX summary (how it is structured, what works, where people struggle), its screens, its user flows and the patterns and components it relies on.</p></div>
-      <div class="pgrid">${products.map((p) => `
-        <a class="pcard" href="#product/${p.id}">
-          <div class="pcard-stack">${p.screens.slice(0, 2).map((s) => thumb(s)).join('')}</div>
-          <div class="pcard-body">
-            <div class="pcard-name">${logo(p)}${esc(p.name)}</div>
-            <p>${esc(p.tagline)}</p>
-            <div class="pcard-foot"><span>${esc(industries[p.industry])}</span><span>${platformLabel[p.platform]}</span><span>${p.screens.length} screens</span><span>${(p.flows || []).length} flow${(p.flows || []).length === 1 ? '' : 's'}</span></div>
-          </div>
-        </a>`).join('')}</div>`;
+      ${pageHead(kind === 'element' ? 'UI Elements' : 'Patterns', kind === 'element' ? 'Filters, forms, drawers, tables and more, outlined on the real screens that use them.' : 'Recurring solutions to recurring problems, from command palettes to setup checklists.')}
+      ${entries.length ? Object.entries(groups).map(([g, ks]) => `
+        <section class="tsec"><h2>${esc(g)}</h2><div class="tgrid">${ks.map((k, i) => {
+          const m = visible.filter((s) => s[key].includes(k));
+          const ex = m[(i * 7 + k.length) % (m.length || 1)];
+          return `<a class="tcard${m.length ? '' : ' zero'}" href="#${kind}/${k}"><span class="tile">${ex ? thumb(ex, kind === 'element' ? k : null) : ''}</span><span class="tcard-meta"><b>${esc(dict[k].name)}</b><span>${m.length} screen${m.length === 1 ? '' : 's'}</span></span></a>`;
+        }).join('')}</div></section>`).join('') : emptyBox('Nothing matches that search', 'Try a different word.', null)}`;
     hydrate(main);
   };
+  pages.elements = () => taxGrid('element');
+  pages.patterns = () => taxGrid('pattern');
 
-  pages.product = (id) => {
-    const p = products.find((x) => x.id === id); if (!p) return notFound();
-    const pc = {}; const cc = {};
-    p.screens.forEach((s) => { s.patterns.forEach((x) => { pc[x] = (pc[x] || 0) + 1; }); s.comps.forEach((x) => { cc[x] = (cc[x] || 0) + 1; }); });
-    const sorted = (o) => Object.entries(o).sort((a, b) => b[1] - a[1]);
-    const li = (arr) => `<ul>${arr.map((x) => `<li><span>${esc(x)}</span></li>`).join('')}</ul>`;
+  const taxDetail = (kind, id) => {
+    const dict = kind === 'element' ? components : patterns;
+    const d = dict[id]; if (!d) return notFound();
+    const key = kind === 'element' ? 'comps' : 'patterns';
+    const list = screens.filter((s) => s[key].includes(id) && onPlatform(s.product));
+    const prods = [...new Set(list.map((s) => s.product))];
     main.innerHTML = `
-      <a class="back" href="#products">${svg(I.back, 14)}All products</a>
-      <div class="phead">
-        <div><h1>${logo(p)}${esc(p.name)}</h1><p>${esc(p.tagline)}</p>
-          <div class="facts"><a class="chip" href="#screens" data-ind="${p.industry}">${esc(industries[p.industry])}</a><span class="chip">${platformLabel[p.platform]}</span><span class="chip">${p.screens.length} screens</span></div>
-        </div>
-        <a class="btn" href="${p.url}" target="_blank" rel="noopener">Visit ${esc(p.url.replace(/^https?:\/\//, ''))}${svg(I.ext, 14)}</a>
-      </div>
-      <section class="section">
-        <div class="section-head"><h2>UX summary</h2></div>
-        <p class="ux-overview">${esc(p.summary.overview)}</p>
-        <div class="ux">
-          <div class="ux-col structure"><h3>Structure</h3>${li(p.summary.structure)}</div>
-          <div class="ux-col strengths"><h3>Strengths</h3>${li(p.summary.strengths)}</div>
-          <div class="ux-col pains"><h3>Pain points</h3>${li(p.summary.pains)}</div>
-        </div>
-      </section>
-      <section class="section">
-        <div class="section-head"><h2>Screens</h2><span class="mono">${p.screens.length}</span></div>
-        <div class="grid lg">${p.screens.map((s) => screenCard(s, 'product:' + p.id)).join('')}</div>
-      </section>
-      <section class="section">
-        <div class="section-head"><h2>User flows</h2><span class="mono">${(p.flows || []).length}</span></div>
-        <div class="flist">${(p.flows || []).map(flowCard).join('')}</div>
-      </section>
-      <section class="section">
-        <div class="section-head"><h2>Patterns used</h2></div>
-        <div class="chips">${sorted(pc).map(([k, n]) => `<a class="chip" href="#pattern/${k}">${esc(patterns[k].name)}<span class="c">${n}</span></a>`).join('')}</div>
-      </section>
-      <section class="section">
-        <div class="section-head"><h2>Components used</h2></div>
-        <div class="chips">${sorted(cc).map(([k, n]) => `<a class="chip" href="#component/${k}">${esc(components[k].name)}<span class="c">${n}</span></a>`).join('')}</div>
-      </section>`;
+      <a class="back" href="#${kind === 'element' ? 'elements' : 'patterns'}">${svg(I.back, 15)}${kind === 'element' ? 'UI Elements' : 'Patterns'}</a>
+      <div class="dhead"><span class="eyebrow">${esc(d.group)}</span><h1>${esc(d.name)}</h1><p>${esc(d.desc)}</p>
+        <div class="dmeta"><span>${list.length} screens</span><span>${prods.length} apps</span>${prods.map((p) => `<a class="appchip" href="#app/${p.id}">${icon(p, 'xs')}${esc(p.name)}</a>`).join('')}</div></div>
+      ${d.use || d.watch ? `<div class="notes">${d.use ? `<div class="note"><h3>When to use it</h3><p>${esc(d.use)}</p></div>` : ''}${d.watch ? `<div class="note"><h3>Watch out for</h3><p>${esc(d.watch)}</p></div>` : ''}</div>` : ''}
+      ${list.length ? `<div class="sgrid">${list.map((s) => screenCard(s, kind + ':' + id, { focus: kind === 'element' ? id : null })).join('')}</div>` : emptyBox('No examples on this platform', 'Switch the platform to All to see more.', null)}`;
     hydrate(main);
-    $('[data-ind]', main).onclick = () => { state.industry = [p.industry]; state.platform = []; state.pattern = []; state.comp = []; saveFilters(); };
   };
+  pages.element = (id) => taxDetail('element', id);
+  pages.pattern = (id) => taxDetail('pattern', id);
 
-  const flowCard = (f) => `
-    <a class="fcard" href="#flow/${f.id}">
-      <div><span class="scard-top"><span class="pdot" style="background:${f.product.color}"></span>${esc(f.product.name)} · ${f.steps.length} steps</span><h3>${esc(f.name)}</h3><p>${esc(f.goal)}</p></div>
-      <div class="fstrip">${f.steps.map((st, i) => (i ? `<span class="arr">${svg(I.arrow, 14)}</span>` : '') + thumb(screenById[st.screen])).join('')}</div>
-    </a>`;
+  const flowRow = (f, ctx) => `
+    <div class="frow">
+      <a class="frow-head" href="#flow/${f.id}">${icon(f.product, 'sm')}<span class="frow-text"><b>${esc(f.name)}</b><span>${esc(f.product.name)} · ${f.steps.length} steps</span></span>${svg(I.right, 18)}</a>
+      <div class="frow-strip">${f.steps.map((st, i) => screenCard(screenById[st.screen], ctx || 'flow:' + f.id, { hideApp: true }).replace('<span class="scard-text"><b>', `<span class="scard-text"><b><i class="stepn">${i + 1}</i>`)).join('')}</div>
+    </div>`;
 
   pages.flows = () => {
+    const list = flows.filter((f) => onPlatform(f.product) && (!state.cat || f.product.industry === state.cat) && (!state.q || hit([f.name, f.goal, f.product.name].join(' '))));
+    const counts = {}; flows.filter((f) => onPlatform(f.product)).forEach((f) => { counts[f.product.industry] = (counts[f.product.industry] || 0) + 1; });
     main.innerHTML = `
-      <div class="page-head"><span class="eyebrow">User flows</span><h1>Tasks, step by step.</h1>
-      <p>Each flow follows one job from start to finish across real screens, with what happens at each step and where people get stuck.</p></div>
-      <div class="flist">${flows.map(flowCard).join('')}</div>`;
-    hydrate(main);
+      ${pageHead('Flows', `${list.length} user flows, step by step`)}
+      ${catChips(counts)}
+      ${list.length ? `<div class="flist">${list.map((f) => flowRow(f)).join('')}</div>` : emptyBox('No flows found', 'Try another category or clear the search.', ['reset', 'Clear filters'])}`;
+    hydrate(main); bindChips(main);
+    ($('#reset', main) || {}).onclick = resetAll;
   };
 
   pages.flow = (id) => {
     const f = flows.find((x) => x.id === id); if (!f) return notFound();
     main.innerHTML = `
-      <a class="back" href="#flows">${svg(I.back, 14)}All flows</a>
-      <div class="page-head"><span class="scard-top"><span class="pdot" style="background:${f.product.color}"></span><a href="#product/${f.product.id}">${esc(f.product.name)}</a> · ${f.steps.length} steps</span>
-      <h1>${esc(f.name)}</h1><p><b>Goal:</b> ${esc(f.goal)}</p></div>
-      <div class="steps">${f.steps.map((st, i) => { const s = screenById[st.screen]; return `
-        <div class="step"><span class="step-n">${i + 1}</span>
-          ${screenCard(s, 'flow:' + f.id).replace('class="scard"', 'class="scard" style="min-width:0"')}
-          <div class="step-note"><span class="eyebrow">Step ${i + 1} of ${f.steps.length}</span><h3>${esc(s.title)}</h3><p>${esc(st.note)}</p></div>
-        </div>`; }).join('')}</div>
-      ${f.friction ? `<div class="callout"><span>${svg('M10.3 3.9L1.8 18a2 2 0 0 0 1.7 3h17a2 2 0 0 0 1.7-3L13.7 3.9a2 2 0 0 0-3.4 0z M12 9v4 M12 17h.01', 20)}</span><div><h3>Friction</h3><p>${esc(f.friction)}</p></div></div>` : ''}`;
+      <a class="back" href="#app/${f.product.id}/flows">${svg(I.back, 15)}${esc(f.product.name)} flows</a>
+      <div class="dhead"><span class="eyebrow">${esc(f.product.name)} · ${f.steps.length} steps</span><h1>${esc(f.name)}</h1><p>${esc(f.goal)}</p></div>
+      <ol class="steps">${f.steps.map((st, i) => { const s = screenById[st.screen]; return `
+        <li class="step"><div class="step-note"><span class="stepn lg">${i + 1}</span><div><b>${esc(s.title)}</b><p>${esc(st.note)}</p></div></div>${screenCard(s, 'flow:' + f.id, { hideApp: true })}</li>`; }).join('')}</ol>
+      ${f.friction ? `<div class="friction">${svg(I.alert, 18)}<div><b>Friction</b><p>${esc(f.friction)}</p></div></div>` : ''}`;
     hydrate(main);
   };
 
-  const taxPage = (kind) => {
-    const dict = kind === 'pattern' ? patterns : components;
-    const counts = kind === 'pattern' ? patternCount : compCount;
-    const key = kind === 'pattern' ? 'patterns' : 'comps';
-    const groups = {};
-    Object.entries(dict).forEach(([k, v]) => { (groups[v.group] ||= []).push(k); });
+  pages.app = (id, tab) => {
+    const p = products.find((x) => x.id === id); if (!p) return notFound();
+    tab = tab || 'screens';
+    const cc = {}; p.screens.forEach((s) => s.comps.forEach((x) => { cc[x] = (cc[x] || 0) + 1; }));
+    const pc = {}; p.screens.forEach((s) => s.patterns.forEach((x) => { pc[x] = (pc[x] || 0) + 1; }));
+    const sorted = (o) => Object.entries(o).sort((a, b) => b[1] - a[1]);
+    const li = (arr) => `<ul>${arr.map((x) => `<li>${esc(x)}</li>`).join('')}</ul>`;
+    const tabs = [['screens', 'Screens', p.screens.length], ['elements', 'UI Elements', Object.keys(cc).length], ['flows', 'Flows', (p.flows || []).length], ['ux', 'UX summary', null]];
+    let body = '';
+    if (tab === 'screens') body = `<div class="sgrid">${p.screens.map((s) => screenCard(s, 'product:' + p.id, { hideApp: true })).join('')}</div>`;
+    if (tab === 'flows') body = `<div class="flist">${(p.flows || []).map((f) => flowRow(f)).join('')}</div>`;
+    if (tab === 'elements') body = `<div class="tgrid">${sorted(cc).map(([k, n]) => { const ex = p.screens.find((s) => s.comps.includes(k)); return `<a class="tcard" href="#element/${k}"><span class="tile">${thumb(ex, k)}</span><span class="tcard-meta"><b>${esc(components[k].name)}</b><span>${n} screen${n === 1 ? '' : 's'}</span></span></a>`; }).join('')}</div>`;
+    if (tab === 'ux') body = `
+      <p class="ux-lede">${esc(p.summary.overview)}</p>
+      <div class="ux">
+        <div class="ux-col"><h3>Structure</h3>${li(p.summary.structure)}</div>
+        <div class="ux-col good"><h3>Strengths</h3>${li(p.summary.strengths)}</div>
+        <div class="ux-col bad"><h3>Pain points</h3>${li(p.summary.pains)}</div>
+      </div>
+      <h3 class="ux-sub">Patterns used</h3><div class="taglist">${sorted(pc).map(([k, n]) => `<a class="tagpill" href="#pattern/${k}">${esc(patterns[k].name)}<em>${n}</em></a>`).join('')}</div>`;
     main.innerHTML = `
-      <div class="page-head"><span class="eyebrow">${kind === 'pattern' ? 'UX patterns' : 'UI components'}</span>
-      <h1>${kind === 'pattern' ? 'Patterns that solve recurring problems.' : 'The building blocks, in context.'}</h1>
-      <p>${kind === 'pattern' ? 'Recurring solutions to recurring problems: how products handle navigation, data, editing, feedback and collaboration. Each one links to the screens that use it.' : 'Filters, forms, drawers, tables and the rest, each shown on the real screens that use it. The component is outlined on every example.'}</p></div>
-      ${Object.entries(groups).map(([g, ks]) => `
-        <div class="tax-group"><div class="section-head"><h2>${esc(g)}</h2><span class="mono">${ks.length}</span></div>
-        <div class="tax-list">${ks.sort((a, b) => (counts[b] || 0) - (counts[a] || 0)).map((k, i) => { const m = screens.filter((s) => s[key].includes(k)); const ex = m[(i * 7 + k.length) % (m.length || 1)]; return `
-          <a class="tax${counts[k] ? '' : ' zero'}" href="#${kind}/${k}"><div><h3>${esc(dict[k].name)}<span class="mono">${counts[k] || 0}</span></h3><p>${esc(dict[k].desc)}</p></div>${ex ? thumb(ex, kind === 'component' ? k : null) : '<span></span>'}</a>`; }).join('')}</div></div>`).join('')}`;
+      <div class="apphead">
+        ${icon(p, 'xl')}
+        <div class="apphead-text"><h1>${esc(p.name)}</h1><p>${esc(p.tagline)}</p>
+          <div class="dmeta"><a class="appchip" href="#apps" data-cat="${p.industry}">${esc(industries[p.industry])}</a><span>${platformLabel[p.platform]}</span></div></div>
+        <a class="pill" href="${p.url}" target="_blank" rel="noopener">Visit website${svg(I.ext, 14)}</a>
+      </div>
+      <nav class="subtabs" aria-label="${esc(p.name)} sections">${tabs.map(([k, l, n]) => `<a href="#app/${p.id}/${k}" class="${tab === k ? 'on' : ''}">${l}${n != null ? `<em>${n}</em>` : ''}</a>`).join('')}</nav>
+      ${body}`;
     hydrate(main);
   };
-  pages.patterns = () => taxPage('pattern');
-  pages.components = () => taxPage('component');
-
-  const taxDetail = (kind, id) => {
-    const dict = kind === 'pattern' ? patterns : components;
-    const d = dict[id]; if (!d) return notFound();
-    const key = kind === 'pattern' ? 'patterns' : 'comps';
-    const list = screens.filter((s) => s[key].includes(id));
-    const prods = [...new Set(list.map((s) => s.product))];
-    main.innerHTML = `
-      <a class="back" href="#${kind}s">${svg(I.back, 14)}All ${kind}s</a>
-      <div class="page-head"><span class="eyebrow">${esc(d.group)} · ${kind}</span><h1>${esc(d.name)}</h1><p>${esc(d.desc)}</p>
-      <div class="stats"><span><b>${list.length}</b>screens</span><span><b>${prods.length}</b>products</span></div></div>
-      ${d.use || d.watch ? `<div class="detail-grid">${d.use ? `<div class="note good"><h3>When to use it</h3><p>${esc(d.use)}</p></div>` : ''}${d.watch ? `<div class="note warn"><h3>Watch out for</h3><p>${esc(d.watch)}</p></div>` : ''}</div>` : ''}
-      <section class="section"><div class="section-head"><h2>Examples</h2><span class="mono">${list.length}</span></div>
-      ${list.length ? `<div class="grid">${list.map((s) => screenCard(s, kind + ':' + id, kind === 'component' ? id : null)).join('')}</div>` : '<div class="empty-results"><b>No examples yet.</b><span>None of the recreated screens use this one so far.</span></div>'}</section>
-      ${prods.length ? `<section class="section"><div class="section-head"><h2>Used by</h2></div><div class="chips">${prods.map((p) => `<a class="chip" href="#product/${p.id}"><span class="pdot" style="background:${p.color}"></span>${esc(p.name)}</a>`).join('')}</div></section>` : ''}`;
-    hydrate(main);
-  };
-  pages.pattern = (id) => taxDetail('pattern', id);
-  pages.component = (id) => taxDetail('component', id);
 
   function notFound() {
-    main.innerHTML = `<div class="empty-results"><b>That page does not exist.</b><a class="btn" href="#screens">Browse all screens</a></div>`;
+    main.innerHTML = emptyBox('That page does not exist', 'It may have moved.', ['home', 'Go to apps']);
+    $('#home', main).onclick = () => { location.hash = 'apps'; };
   }
 
-  /* ---------- Context lists for viewer navigation ---------- */
+  // Footer and app-chip category links set the category before navigating
+  document.addEventListener('click', (e) => {
+    const c = e.target.closest('[data-cat]');
+    if (c) { state.cat = c.dataset.cat; save(); if (location.hash === c.getAttribute('href')) render(true); }
+  });
+
+  /* ---------- Viewer ---------- */
   function ctxList(ctx) {
     const [kind, id] = ctx.split(':');
     if (kind === 'browse') return browseCtx;
     if (kind === 'product') return products.find((p) => p.id === id).screens.map((s) => s.id);
     if (kind === 'flow') return flows.find((f) => f.id === id).steps.map((s) => s.screen);
-    if (kind === 'pattern') return screens.filter((s) => s.patterns.includes(id)).map((s) => s.id);
-    if (kind === 'component') return screens.filter((s) => s.comps.includes(id)).map((s) => s.id);
+    if (kind === 'pattern') return screens.filter((s) => s.patterns.includes(id) && onPlatform(s.product)).map((s) => s.id);
+    if (kind === 'element') return screens.filter((s) => s.comps.includes(id) && onPlatform(s.product)).map((s) => s.id);
     return [ctx];
   }
 
-  /* ---------- Viewer ---------- */
   const viewer = $('#viewer');
   const V = { list: [], i: 0, ctx: '', focus: null, hl: false, s: 1, x: 0, y: 0, lastFocus: null };
   viewer.innerHTML = `
-    <div class="vbar">
-      <div class="vgroup"><button class="vbtn" data-v="prev" aria-label="Previous screen">${svg(I.left)}</button><span class="vzoom" id="vpos"></span><button class="vbtn" data-v="next" aria-label="Next screen">${svg(I.right)}</button></div>
-      <div class="vbar-title"><b id="vtitle"></b><span id="vsub"></span></div>
-      <div class="vgroup"><button class="vbtn" data-v="out" aria-label="Zoom out">${svg(I.minus)}</button><span class="vzoom" id="vzoom">100%</span><button class="vbtn" data-v="in" aria-label="Zoom in">${svg(I.plus)}</button><button class="vbtn hide-sm" data-v="fit">Fit</button><button class="vbtn hide-sm" data-v="100">1:1</button><button class="vbtn hide-sm" data-v="200">2×</button></div>
-      <button class="vbtn" data-v="hl" style="border:1px solid var(--line)" aria-pressed="false">${svg(I.comp, 15)}<span class="hide-sm">Components</span></button>
-      <button class="vbtn" data-v="close" aria-label="Close viewer" style="border:1px solid var(--line)">${svg(I.x)}</button>
-    </div>
-    <div class="vmain">
-      <div class="stage" id="stage"><div class="stage-inner" id="sinner"></div><div class="stage-hint">Scroll or drag to pan · Ctrl/⌘ + scroll or pinch to zoom · Double-click to toggle 1:1</div></div>
+    <div class="vmodal">
+      <div class="stage" id="stage">
+        <div class="stage-inner" id="sinner"></div>
+        <button class="vclose" data-v="close" aria-label="Close viewer">${svg(I.x, 18)}</button>
+        <button class="vnav prev" data-v="prev" aria-label="Previous screen">${svg(I.left, 20)}</button>
+        <button class="vnav next" data-v="next" aria-label="Next screen">${svg(I.right, 20)}</button>
+        <div class="vtools">
+          <button data-v="out" aria-label="Zoom out">${svg(I.minus)}</button><span id="vzoom">100%</span><button data-v="in" aria-label="Zoom in">${svg(I.plus)}</button>
+          <i></i><button data-v="fit">Fit</button><button data-v="100">1:1</button><button data-v="200" class="hide-sm">2×</button>
+          <i></i><button data-v="hl" aria-pressed="false">${svg(I.comp, 15)}<span class="hide-sm">UI Elements</span></button>
+        </div>
+      </div>
       <aside class="vside" id="vside"></aside>
     </div>`;
   const stage = $('#stage'); const sinner = $('#sinner');
@@ -349,9 +377,6 @@
     const scr = $('.m-screen', sinner);
     if (V.hl) scr.classList.add('hl');
     if (V.focus) focusComp(V.focus);
-    $('#vtitle').textContent = s.title;
-    $('#vsub').textContent = `${s.product.name} · ${industries[s.product.industry]} · ${platformLabel[s.product.platform]}`;
-    $('#vpos').textContent = `${V.i + 1}/${V.list.length}`;
     $('[data-v="prev"]', viewer).disabled = V.i === 0;
     $('[data-v="next"]', viewer).disabled = V.i === V.list.length - 1;
     const [kind, cid] = V.ctx.split(':');
@@ -359,12 +384,12 @@
     const compCounts = {};
     $$('[data-comp]', scr).forEach((el) => { const c = el.dataset.comp; compCounts[c] = (compCounts[c] || 0) + 1; });
     $('#vside').innerHTML = `
-      ${flowStep ? `<div class="step-ctx"><span class="eyebrow">${esc(flowStep.f.name)} · Step ${V.i + 1} of ${flowStep.f.steps.length}</span><span>${esc(flowStep.st.note)}</span></div>` : ''}
-      <div class="vblock"><span class="scard-top"><span class="pdot" style="background:${s.product.color}"></span><a href="#product/${s.product.id}" data-close>${esc(s.product.name)}</a></span><h2>${esc(s.title)}</h2><p class="lede">${esc(s.desc)}</p></div>
-      <div class="vblock"><h3>Patterns</h3><div class="tags">${s.patterns.map((x) => `<a class="tag" href="#pattern/${x}" data-close>${esc(patterns[x].name)}</a>`).join('')}</div></div>
-      <div class="vblock"><h3>Components<span>hover to outline</span></h3><div class="clist">${s.comps.map((c) => `<button data-c="${c}" class="${V.focus === c ? 'on' : ''}"><span class="dash"></span>${esc(components[c].name)}<span class="mono">${compCounts[c] || ''}</span></button>`).join('')}</div></div>
-      ${s.flows.length ? `<div class="vblock"><h3>Appears in</h3><div class="tags">${s.flows.map((x) => `<a class="tag" href="#flow/${x.flow.id}" data-close>${esc(x.flow.name)} · step ${x.index + 1}</a>`).join('')}</div></div>` : ''}
-      <div class="vblock"><h3>About ${esc(s.product.name)}</h3><p class="lede">${esc(s.product.summary.overview)}</p><a class="tag" href="#product/${s.product.id}" data-close style="align-self:flex-start">Read the UX summary →</a></div>`;
+      <a class="vapp" href="#app/${s.product.id}" data-close>${icon(s.product)}<span><b>${esc(s.product.name)}</b><span>${esc(industries[s.product.industry])}</span></span>${svg(I.right, 16)}</a>
+      <div class="vblock"><span class="eyebrow">${V.i + 1} of ${V.list.length}</span><h2>${esc(s.title)}</h2><p>${esc(s.desc)}</p></div>
+      ${flowStep ? `<div class="vstep"><span class="eyebrow">${esc(flowStep.f.name)} · step ${V.i + 1}</span><p>${esc(flowStep.st.note)}</p></div>` : ''}
+      <div class="vblock"><h3>Patterns</h3><div class="taglist">${s.patterns.map((x) => `<a class="tagpill" href="#pattern/${x}" data-close>${esc(patterns[x].name)}</a>`).join('')}</div></div>
+      <div class="vblock"><h3>UI Elements <span>hover to outline</span></h3><div class="clist">${s.comps.map((c) => `<button data-c="${c}" class="${V.focus === c ? 'on' : ''}"><span class="dash"></span>${esc(components[c].name)}<em>${compCounts[c] || ''}</em></button>`).join('')}</div></div>
+      ${s.flows.length ? `<div class="vblock"><h3>In flows</h3><div class="taglist">${s.flows.map((x) => `<a class="tagpill" href="#flow/${x.flow.id}" data-close>${esc(x.flow.name)} · ${x.index + 1}</a>`).join('')}</div></div>` : ''}`;
     $$('[data-c]', $('#vside')).forEach((b) => {
       b.onmouseenter = () => focusComp(b.dataset.c);
       b.onmouseleave = () => focusComp(V.focus);
@@ -384,8 +409,9 @@
   }
   function fit() {
     const r = stage.getBoundingClientRect();
-    V.s = Math.min((r.width - 40) / MOCK.W, (r.height - 40) / MOCK.H);
-    V.x = (r.width - MOCK.W * V.s) / 2; V.y = (r.height - MOCK.H * V.s) / 2; apply();
+    const padX = r.width > 700 ? 120 : 24, padY = 120;
+    V.s = Math.min((r.width - padX) / MOCK.W, (r.height - padY) / MOCK.H);
+    V.x = (r.width - MOCK.W * V.s) / 2; V.y = (r.height - 56 - MOCK.H * V.s) / 2 + 8; apply();
   }
   function zoomTo(ns, cx, cy) {
     const r = stage.getBoundingClientRect();
@@ -395,6 +421,7 @@
   }
   const go = (d) => { const n = V.i + d; if (n >= 0 && n < V.list.length) { V.i = n; showScreen(); } };
   viewer.addEventListener('click', (e) => {
+    if (e.target === viewer) return closeViewer();
     const b = e.target.closest('[data-v]'); if (!b) return;
     const a = b.dataset.v;
     if (a === 'close') closeViewer();
@@ -414,12 +441,17 @@
     else { V.x -= e.deltaX; V.y -= e.deltaY; apply(); }
   }, { passive: false });
   stage.addEventListener('dblclick', (e) => {
+    if (e.target.closest('button')) return;
     const r = stage.getBoundingClientRect();
     if (Math.abs(V.s - 1) < 0.02) fit(); else zoomTo(1, e.clientX - r.left, e.clientY - r.top);
   });
   // Drag to pan, two-finger pinch to zoom
   const ptrs = new Map(); let pinch = null;
-  stage.addEventListener('pointerdown', (e) => { stage.setPointerCapture(e.pointerId); ptrs.set(e.pointerId, { x: e.clientX, y: e.clientY }); stage.classList.add('grabbing'); if (ptrs.size === 2) { const [a, b] = [...ptrs.values()]; pinch = { d: Math.hypot(a.x - b.x, a.y - b.y), s: V.s }; } });
+  stage.addEventListener('pointerdown', (e) => {
+    if (e.target.closest('button')) return;
+    stage.setPointerCapture(e.pointerId); ptrs.set(e.pointerId, { x: e.clientX, y: e.clientY }); stage.classList.add('grabbing');
+    if (ptrs.size === 2) { const [a, b] = [...ptrs.values()]; pinch = { d: Math.hypot(a.x - b.x, a.y - b.y), s: V.s }; }
+  });
   stage.addEventListener('pointermove', (e) => {
     if (!ptrs.has(e.pointerId)) return;
     const prev = ptrs.get(e.pointerId); const cur = { x: e.clientX, y: e.clientY }; ptrs.set(e.pointerId, cur);
@@ -434,6 +466,11 @@
 
   document.addEventListener('keydown', (e) => {
     const typing = /INPUT|TEXTAREA|SELECT/.test(document.activeElement.tagName);
+    const trap = (root) => {
+      const f = $$('button:not([disabled]), a[href], input', root); const i = f.indexOf(document.activeElement);
+      if (e.shiftKey && i <= 0) { e.preventDefault(); f[f.length - 1].focus(); } else if (!e.shiftKey && i === f.length - 1) { e.preventDefault(); f[0].focus(); }
+    };
+    if (!fdlg.hidden) { if (e.key === 'Escape') closeFilters(); else if (e.key === 'Tab') trap(fdlg); return; }
     if (!viewer.hidden) {
       if (e.key === 'Escape') closeViewer();
       else if (e.key === 'ArrowRight') go(1);
@@ -443,10 +480,7 @@
       else if (e.key === '0') fit();
       else if (e.key === '1') zoomTo(1);
       else if (e.key.toLowerCase() === 'c') $('[data-v="hl"]', viewer).click();
-      else if (e.key === 'Tab') { // keep focus inside the dialog
-        const f = $$('button:not([disabled]), a[href]', viewer); const i = f.indexOf(document.activeElement);
-        if (e.shiftKey && i <= 0) { e.preventDefault(); f[f.length - 1].focus(); } else if (!e.shiftKey && i === f.length - 1) { e.preventDefault(); f[0].focus(); }
-      }
+      else if (e.key === 'Tab') trap(viewer);
       return;
     }
     if (e.key === '/' && !typing) { e.preventDefault(); qInput.focus(); }
@@ -463,26 +497,32 @@
     clearTimeout(qTimer);
     qTimer = setTimeout(() => {
       state.q = qInput.value.trim();
-      if (route().page !== 'screens') location.hash = 'screens'; else rerenderKeepScroll();
+      const { page } = route();
+      if (['apps', 'screens', 'elements', 'patterns', 'flows'].includes(page)) render(true); else location.hash = 'screens';
     }, 120);
   });
   qInput.addEventListener('keydown', (e) => { if (e.key === 'Escape') { qInput.value = ''; qInput.dispatchEvent(new Event('input')); qInput.blur(); } });
 
   /* ---------- Router ---------- */
+  const ALIAS = { product: 'app', products: 'apps', components: 'elements', component: 'element', '': 'apps' };
   function route() {
     const h = decodeURIComponent(location.hash.replace(/^#\/?/, ''));
-    const [page, id] = h.split('/');
-    return { page: page || 'screens', id };
+    const [raw, id, tab] = h.split('/');
+    const page = ALIAS[raw] ?? raw;
+    return { page, id, tab };
   }
-  function render() {
-    const { page, id } = route();
+  const NAV_OF = { apps: 'apps', app: 'apps', screens: 'screens', elements: 'elements', element: 'elements', flows: 'flows', flow: 'flows', patterns: 'patterns', pattern: 'patterns' };
+  function render(keepScroll) {
+    const y = scrollY;
+    const { page, id, tab } = route();
     if (!viewer.hidden) closeViewer();
-    (pages[page] || notFound)(id);
-    $$('[data-nav]').forEach((a) => a.classList.toggle('on', a.dataset.nav === page || a.dataset.nav + 's' === page || (page === 'product' && a.dataset.nav === 'products') || (page === 'flow' && a.dataset.nav === 'flows')));
-    document.title = { screens: 'Inspux', products: 'Products · Inspux', flows: 'User flows · Inspux', patterns: 'Patterns · Inspux', components: 'Components · Inspux' }[page]
-      || `${(id && (products.find((p) => p.id === id) || flows.find((f) => f.id === id) || patterns[id] || components[id] || {}).name) || 'Inspux'} · Inspux`;
+    if (!fdlg.hidden) closeFilters();
+    (pages[page] || notFound)(id, tab);
+    $$('[data-nav]').forEach((a) => a.classList.toggle('on', a.dataset.nav === NAV_OF[page]));
+    const name = id && ((products.find((p) => p.id === id) || flows.find((f) => f.id === id) || patterns[id] || components[id] || {}).name);
+    document.title = name ? `${name} · Inspux` : page === 'apps' ? 'Inspux' : `${{ screens: 'Screens', elements: 'UI Elements', flows: 'Flows', patterns: 'Patterns' }[page] || 'Inspux'} · Inspux`;
+    if (keepScroll) scrollTo(0, y);
   }
-  let lastPage = null;
-  addEventListener('hashchange', () => { render(); const p = route().page; if (p !== lastPage || p !== 'screens') scrollTo(0, 0); lastPage = p; });
-  render(); lastPage = route().page;
+  addEventListener('hashchange', () => { render(false); scrollTo(0, 0); });
+  render(false);
 })();

@@ -1,6 +1,6 @@
 # Inspux
 
-A design and product inspiration library of desktop SaaS screens. Every screen is a hand-built HTML recreation (not a screenshot), broken down into:
+A design and product inspiration library of desktop SaaS screens, with a browsing experience modeled on Mobbin: an Apps / Screens / UI Elements / Flows / Patterns layout, a platform switch, category chips, a filter dialog and a screen viewer. Every screen is a hand-built HTML recreation (not a screenshot), broken down into:
 
 - **Screens**: 48 desktop screens from 12 products in 12 industries, with search and faceted filters (industry, platform, patterns, components)
 - **User flows**: 13 step-by-step flows, with notes on each step and the main friction point
